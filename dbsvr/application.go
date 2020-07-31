@@ -8,13 +8,13 @@ import (
 	"regexp"
 	"strconv"
 	"time"
-	"tuoxie/driftbottle"
-	"tuoxie/driftbottle/types"
+	"driftbottle"
+	"driftbottle/types"
 
 	uuid "github.com/satori/go.uuid"
 
 	tmtypes "github.com/tendermint/tendermint/abci/types"
-	dbm "github.com/tendermint/tendermint/libs/db"
+	dbm "github.com/tendermint/tm-db"
 )
 
 const (
@@ -50,13 +50,15 @@ type driftBottleApplication struct {
 }
 
 func newDriftBottleApplication() *driftBottleApplication {
+	fmt.Println("begin newDriftBottleApplication")
+
 	name := "driftbottleapp"
 	db, err := dbm.NewGoLevelDB(name, dbDir)
 	if err != nil {
 		panic(err)
 	}
 
-	appBytes := db.Get([]byte(appKEY))
+	appBytes, _ := db.Get([]byte(appKEY))
 	var app driftBottleApplication
 	if len(appBytes) != 0 {
 		err := json.Unmarshal(appBytes, &app)
@@ -69,14 +71,17 @@ func newDriftBottleApplication() *driftBottleApplication {
 }
 
 func (app *driftBottleApplication) Info(req tmtypes.RequestInfo) tmtypes.ResponseInfo {
+	fmt.Println("begin Info")
 	res := tmtypes.ResponseInfo{LastBlockHeight: app.BlockHeight}
 	return res
 }
 
-func (app *driftBottleApplication) CheckTx(raw []byte) (rsp tmtypes.ResponseCheckTx) {
-	//fmt.Println("begin checktx")
+
+//func (app *driftBottleApplication) CheckTx(raw []byte) (rsp tmtypes.ResponseCheckTx) {
+func (app *driftBottleApplication) CheckTx(req tmtypes.RequestCheckTx) (rsp tmtypes.ResponseCheckTx) {
+	fmt.Println("begin checktx")
 	var tx types.Transx
-	err := cdc.UnmarshalJSON(raw, &tx)
+	err := cdc.UnmarshalJSON(req.Tx, &tx)
 	// value, ok := tx.(*types.Bottle) // true
 	// fmt.Printf("%v,%t", value, ok)
 	if err != nil {
@@ -106,7 +111,7 @@ func (app *driftBottleApplication) CheckTx(raw []byte) (rsp tmtypes.ResponseChec
 	} else {
 		msg, ok := tx.Payload.(*types.Message)
 		if ok {
-			btBytes := app.db.Get(msg.BottleID.Bytes())
+			btBytes, _ := app.db.Get(msg.BottleID.Bytes())
 			if btBytes == nil {
 				rsp.Code = 3
 				rsp.Log = "there is no bottle associated with the msg's bottleID"
@@ -119,7 +124,13 @@ func (app *driftBottleApplication) CheckTx(raw []byte) (rsp tmtypes.ResponseChec
 	return
 }
 
-func (app *driftBottleApplication) DeliverTx(raw []byte) (rsp tmtypes.ResponseDeliverTx) {
+
+//func (app *driftBottleApplication) DeliverTx(raw []byte) (rsp tmtypes.ResponseDeliverTx) {
+func (app *driftBottleApplication) DeliverTx(req tmtypes.RequestDeliverTx) (rsp tmtypes.ResponseDeliverTx) {
+	fmt.Println("begin DeliverTx")
+
+	raw := req.Tx
+	fmt.Println(raw)
 	var tx types.Transx
 	cdc.UnmarshalJSON(raw, &tx) //由于之前CheckTx中转换过，所以这里讲道理不会有error
 
@@ -128,7 +139,7 @@ func (app *driftBottleApplication) DeliverTx(raw []byte) (rsp tmtypes.ResponseDe
 		if bottle.Replier == [32]byte{} {
 			// 更新投放者的瓶子集合
 			key := append(throwerPrefix, bottle.Thrower[:]...)
-			bids := app.db.Get(key)
+			bids, _ := app.db.Get(key)
 			if bids == nil {
 				bids = bottle.ID[:]
 			} else {
@@ -137,7 +148,7 @@ func (app *driftBottleApplication) DeliverTx(raw []byte) (rsp tmtypes.ResponseDe
 			app.db.Set(key, bids)
 
 			//将新瓶子放到池子里，等待后续打捞
-			bottlePool := app.db.Get(bottlePoolKey)
+			bottlePool, _ := app.db.Get(bottlePoolKey)
 			if bottlePool == nil {
 				bottlePool = bottle.ID[:]
 			} else {
@@ -145,14 +156,14 @@ func (app *driftBottleApplication) DeliverTx(raw []byte) (rsp tmtypes.ResponseDe
 			}
 			app.db.Set(bottlePoolKey, bottlePool)
 		} else {
-			bottlePool := app.db.Get(bottlePoolKey)
+			bottlePool, _ := app.db.Get(bottlePoolKey)
 			removePartofBytes(bottlePool, bottle.ID.Bytes()) //从池中移除该漂流瓶
 			app.db.Set(bottlePoolKey, bottlePool)
 		}
 	} else {
 		msg, ok := tx.Payload.(*types.Message)
 		if ok {
-			btBytes := app.db.Get(msg.BottleID.Bytes())
+			btBytes, _ := app.db.Get(msg.BottleID.Bytes())
 			var txtemp types.Transx
 			cdc.UnmarshalJSON(btBytes, &txtemp)
 			bottle, _ = txtemp.Payload.(*types.Bottle)
@@ -165,6 +176,9 @@ func (app *driftBottleApplication) DeliverTx(raw []byte) (rsp tmtypes.ResponseDe
 			raw, _ = cdc.MarshalJSON(tx)
 		}
 	}
+
+	fmt.Println(raw)
+	//fmt.Println(tx.Payload.GetKey()==nil)
 
 	app.db.Set(tx.Payload.GetKey(), raw)
 	
@@ -195,6 +209,8 @@ func removePartofBytes(origin, diss []byte) {
 }
 
 func (app *driftBottleApplication) Commit() tmtypes.ResponseCommit {
+	fmt.Println("begin Commit")
+
 	salvagedBottles = salvagedBottles[:0] //清空salvagedBottles
 
 	app.BlockHeight++
@@ -217,7 +233,10 @@ func getMatchMap(submatches []string, groupNames []string) map[string]string {
 }
 
 func (app *driftBottleApplication) Query(req tmtypes.RequestQuery) (rsp tmtypes.ResponseQuery) {
+	fmt.Println("begin Query")
+
 	//match, _ := regexp.MatchString(queryPathPattern, req.Path)
+	fmt.Println(req.Path)
 	reg := regexp.MustCompile(queryPathPattern)
 	submatches := reg.FindStringSubmatch(req.Path)
 
@@ -226,7 +245,7 @@ func (app *driftBottleApplication) Query(req tmtypes.RequestQuery) (rsp tmtypes.
 		rsp.Info = "Invalid argument - path"
 		println("Invalid argument - path")
 	} else if req.Path == "/salvage" {
-		bottlePool := app.db.Get(bottlePoolKey)
+		bottlePool, _ := app.db.Get(bottlePoolKey)
 		if bottlePool == nil || len(bottlePool) == 0 {
 			rsp.Info = "漂流瓶被捞完啦!"
 			return
@@ -235,7 +254,7 @@ func (app *driftBottleApplication) Query(req tmtypes.RequestQuery) (rsp tmtypes.
 		psize := len(bottlePool) / idlen
 		rand.Seed(time.Now().UnixNano())
 		idx := rand.Intn(psize)
-		btBytes := app.db.Get(bottlePool[idx*idlen : idx*idlen+idlen])
+		btBytes, _ := app.db.Get(bottlePool[idx*idlen : idx*idlen+idlen])
 		rsp.Value = btBytes
 		return
 	} else {
@@ -259,16 +278,16 @@ func (app *driftBottleApplication) Query(req tmtypes.RequestQuery) (rsp tmtypes.
 				// 	meid, _ := strconv.Atoi(smeid)
 				// }
 				msgKey := types.GetMessageKey(btKey, uint16(msid))
-				rsp.Value = app.db.Get(msgKey)
+				rsp.Value, _ = app.db.Get(msgKey)
 				return
 			}
 
-			btBytes := app.db.Get(btKey.Bytes())
+			btBytes, _ := app.db.Get(btKey.Bytes())
 			rsp.Value = btBytes
 			return
 		}
 		key := append(throwerPrefix, uk...)
-		bids := app.db.Get(key)
+		bids, _ := app.db.Get(key)
 		rsp.Value = bids
 		//fmt.Printf("%v,%v", submatches, groupNames)
 	}

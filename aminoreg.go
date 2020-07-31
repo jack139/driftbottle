@@ -1,7 +1,7 @@
 package driftbottle
 
 import (
-	"tuoxie/driftbottle/types"
+	"driftbottle/types"
 
 	"github.com/tendermint/go-amino"
 	"github.com/tendermint/tendermint/crypto"

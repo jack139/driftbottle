@@ -7,12 +7,12 @@ import (
 	"io/ioutil"
 	"strconv"
 	"time"
-	"tuoxie/driftbottle"
-	"tuoxie/driftbottle/types"
+	"driftbottle"
+	"driftbottle/types"
 
 	cfg "github.com/tendermint/tendermint/config"
-	cmn "github.com/tendermint/tendermint/libs/common"
-	rpcclient "github.com/tendermint/tendermint/rpc/client"
+	cmn "github.com/tendermint/tendermint/libs/os"
+	rpcclient "github.com/tendermint/tendermint/rpc/client/http"
 
 	crypto_rand "crypto/rand"
 
@@ -32,7 +32,7 @@ var (
 
 func init() {
 	addr := cfg.DefaultRPCConfig().ListenAddress
-	cli = rpcclient.NewHTTP(addr, "/websocket")
+	cli, _ = rpcclient.New(addr, "/websocket")
 }
 
 type cryptoPair struct {
@@ -149,7 +149,12 @@ func (me *user) getBottle(id string) *types.Bottle {
 	buf.WriteString(id)
 	//获得拼接后的字符串
 	path := buf.String()
+
+	fmt.Println(path)
+
 	rsp, _ := cli.ABCIQuery(path, nil)
+
+	fmt.Println(rsp)
 
 	data := rsp.Response.Value
 	var tx types.Transx
