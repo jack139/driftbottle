@@ -130,7 +130,7 @@ func (app *driftBottleApplication) DeliverTx(req tmtypes.RequestDeliverTx) (rsp 
 	fmt.Println("begin DeliverTx")
 
 	raw := req.Tx
-	fmt.Println(raw)
+	fmt.Println(string(raw))
 	var tx types.Transx
 	cdc.UnmarshalJSON(raw, &tx) //由于之前CheckTx中转换过，所以这里讲道理不会有error
 
@@ -177,7 +177,7 @@ func (app *driftBottleApplication) DeliverTx(req tmtypes.RequestDeliverTx) (rsp 
 		}
 	}
 
-	fmt.Println(raw)
+	//fmt.Println(raw)
 	//fmt.Println(tx.Payload.GetKey()==nil)
 
 	app.db.Set(tx.Payload.GetKey(), raw)

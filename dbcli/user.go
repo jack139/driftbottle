@@ -150,11 +150,11 @@ func (me *user) getBottle(id string) *types.Bottle {
 	//获得拼接后的字符串
 	path := buf.String()
 
-	fmt.Println(path)
+	//fmt.Println(path)
 
 	rsp, _ := cli.ABCIQuery(path, nil)
 
-	fmt.Println(rsp)
+	//fmt.Println(rsp)
 
 	data := rsp.Response.Value
 	var tx types.Transx

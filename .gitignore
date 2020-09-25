@@ -14,3 +14,5 @@
 dbsvr
 dbcli
 go.sum
+config/
+data/
