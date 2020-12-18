@@ -34,6 +34,6 @@ func (cmu *Transx) Sign(privKey crypto.PrivKey) error {
 func (cmu *Transx) Verify() bool {
 	data := cmu.Payload.getSignBytes()
 	sig := cmu.Signature
-	rslt := cmu.SignPubKey.VerifyBytes(data, sig)
+	rslt := cmu.SignPubKey.VerifySignature(data, sig)
 	return rslt
 }

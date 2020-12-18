@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"strconv"
 	"time"
+	"context"
 	"driftbottle"
 	"driftbottle/types"
 
@@ -28,6 +29,7 @@ const KEYFILENAME string = ".userkey"
 var (
 	cli *rpcclient.HTTP
 	cdc = driftbottle.AminoCdc
+	ctx = context.Background()
 )
 
 func init() {
@@ -108,7 +110,7 @@ func (me *user) throwBottle(content string) error {
 		return err
 	}
 
-	ret, err := cli.BroadcastTxSync(bz)
+	ret, err := cli.BroadcastTxSync(ctx, bz)
 	if err != nil {
 		return err
 	}
@@ -127,7 +129,7 @@ func (me *user) getMyBottles() error {
 	buf.WriteString("/bottles")
 	//获得拼接后的字符串
 	path := buf.String()
-	rsp, _ := cli.ABCIQuery(path, nil)
+	rsp, _ := cli.ABCIQuery(ctx, path, nil)
 
 	me.bottleIDs = me.bottleIDs[0:0] // 清空
 	data := rsp.Response.Value
@@ -152,7 +154,7 @@ func (me *user) getBottle(id string) *types.Bottle {
 
 	//fmt.Println(path)
 
-	rsp, _ := cli.ABCIQuery(path, nil)
+	rsp, _ := cli.ABCIQuery(ctx, path, nil)
 
 	//fmt.Println(rsp)
 
@@ -173,7 +175,7 @@ func (me *user) getBottle(id string) *types.Bottle {
 // 捞瓶子
 func (me *user) salvage() {
 	path := "/salvage"
-	rsp, _ := cli.ABCIQuery(path, nil)
+	rsp, _ := cli.ABCIQuery(ctx, path, nil)
 	data := rsp.Response.Value
 
 	var tx types.Transx
@@ -186,7 +188,7 @@ func (me *user) salvage() {
 		fmt.Println(err)
 	}
 
-	_, err = cli.BroadcastTxCommit(bz)
+	_, err = cli.BroadcastTxCommit(ctx, bz)
 	if err != nil {
 		fmt.Println(err)
 	} else {
@@ -220,7 +222,7 @@ func (me *user) getMessageOfBottle(bottleID string, mid uint16) {
 	buf.WriteString(msid)
 	path := buf.String()
 
-	rsp, _ := cli.ABCIQuery(path, nil)
+	rsp, _ := cli.ABCIQuery(ctx, path, nil)
 
 	data := rsp.Response.Value
 	var tx types.Transx
@@ -295,7 +297,7 @@ func (me *user) reply(bottleID, msg string) {
 		fmt.Println(err)
 	}
 
-	ret, err := cli.BroadcastTxAsync(bz)
+	ret, err := cli.BroadcastTxAsync(ctx, bz)
 	if err != nil {
 		fmt.Println(err)
 	}

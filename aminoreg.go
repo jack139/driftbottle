@@ -16,7 +16,7 @@ func init() {
 	AminoCdc.RegisterConcrete(&types.Bottle{}, "bottle", nil)
 	AminoCdc.RegisterConcrete(&types.Message{}, "message", nil)
 	AminoCdc.RegisterInterface((*crypto.PubKey)(nil), nil)
-	AminoCdc.RegisterConcrete(ed25519.PubKeyEd25519{}, "ed25519/pubkey", nil)
+	AminoCdc.RegisterConcrete(ed25519.PubKey{}, "ed25519/pubkey", nil)
 	AminoCdc.RegisterInterface((*crypto.PrivKey)(nil), nil)
-	AminoCdc.RegisterConcrete(ed25519.PrivKeyEd25519{}, "ed25519/privkey", nil)
+	AminoCdc.RegisterConcrete(ed25519.PrivKey{}, "ed25519/privkey", nil)
 }
